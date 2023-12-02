@@ -112,10 +112,11 @@ def main(cfg: DictConfig) -> None:
     LaunchLogger.initialize(use_mlflow=cfg.use_mlflow)  # Modulus launch logger
     logger = PythonLogger("main")  # General python logger
 
+    root_dir = "/mnt/sas/Repositories/modulus/examples/weather/dataset_download/hdf5_data/"
     datapipe = ERA5HDF5Datapipe(
-        data_dir="/data/train/",
-        stats_dir="/data/stats/",
-        channels=[i for i in range(20)],
+        data_dir=os.path.join(root_dir, "train"),
+        stats_dir=os.path.join(root_dir, "stats"),
+        channels=list(range(cfg.num_channels)),
         num_samples_per_year=cfg.num_samples_per_year_train,
         batch_size=2,
         patch_size=(8, 8),
@@ -128,9 +129,9 @@ def main(cfg: DictConfig) -> None:
     if dist.rank == 0:
         logger.file_logging()
         validation_datapipe = ERA5HDF5Datapipe(
-            data_dir="/data/test/",
-            stats_dir="/data/stats/",
-            channels=[i for i in range(20)],
+            data_dir=os.path.join(root_dir, "test"),
+            stats_dir=os.path.join(root_dir, "stats"),
+            channels=list(range(cfg.num_channels)),
             num_steps=8,
             num_samples_per_year=4,
             batch_size=1,
@@ -142,9 +143,9 @@ def main(cfg: DictConfig) -> None:
         logger.success(f"Loaded validaton datapipe of size {len(validation_datapipe)}")
 
     fcn_model = AFNO(
-        img_size=(720, 1440),
-        in_channels=20,
-        out_channels=20,
+        inp_shape=(720, 1440),
+        in_channels=cfg.num_channels,
+        out_channels=cfg.num_channels,
         patch_size=(8, 8),
         embed_dim=768,
         depth=12,
