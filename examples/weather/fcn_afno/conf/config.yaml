@@ -26,3 +26,4 @@ max_epoch: 80
 
 num_samples_per_year_train: null
 num_channels: 73
+dataset_path: "/mnt/sas/Repositories/modulus/examples/weather/dataset_download/hdf5_data/"

@@ -112,10 +112,9 @@ def main(cfg: DictConfig) -> None:
     LaunchLogger.initialize(use_mlflow=cfg.use_mlflow)  # Modulus launch logger
     logger = PythonLogger("main")  # General python logger
 
-    root_dir = "/mnt/sas/Repositories/modulus/examples/weather/dataset_download/hdf5_data/"
     datapipe = ERA5HDF5Datapipe(
-        data_dir=os.path.join(root_dir, "train"),
-        stats_dir=os.path.join(root_dir, "stats"),
+        data_dir=os.path.join(cfg.dataset_path, "train"),
+        stats_dir=os.path.join(cfg.dataset_path, "stats"),
         channels=list(range(cfg.num_channels)),
         num_samples_per_year=cfg.num_samples_per_year_train,
         batch_size=2,
@@ -129,8 +128,8 @@ def main(cfg: DictConfig) -> None:
     if dist.rank == 0:
         logger.file_logging()
         validation_datapipe = ERA5HDF5Datapipe(
-            data_dir=os.path.join(root_dir, "test"),
-            stats_dir=os.path.join(root_dir, "stats"),
+            data_dir=os.path.join(cfg.dataset_path, "test"),
+            stats_dir=os.path.join(cfg.dataset_path, "stats"),
             channels=list(range(cfg.num_channels)),
             num_steps=8,
             num_samples_per_year=4,
