@@ -237,6 +237,7 @@ class ERA5Mirror:
         variables: List[Union[str, Tuple[str, int]]],
         date_range: Tuple[datetime.date, datetime.date],
         hours: List[int],
+        months_to_download: List[int] = None,
     ):
         """
         Start the process of mirroring the specified ERA5 variables for the given date range and hours.
@@ -250,6 +251,8 @@ class ERA5Mirror:
             A tuple containing the start and end dates for the data to be mirrored. This will download and store every month in the range.
         hours : List[int]
             A list of hours for which to download the data.
+        months_to_download : List[int]
+            A list of months for which to download the data.
 
         Returns
         -------
@@ -274,36 +277,39 @@ class ERA5Mirror:
             end_date = end_date.replace(day=1)
 
             while current_date <= end_date:
-                # Create a list of tasks to download the data
-                tasks = []
-                for variable, pressure_level in reformated_variables:
-                    if not self.chunk_exists(
-                        variable,
-                        current_date.year,
-                        current_date.month,
-                        hours,
-                        pressure_level,
-                    ):
-                        task = dask.delayed(self.download_and_upload_chunk)(
+                if months_to_download is None or current_date.month in months_to_download:
+                    # Create a list of tasks to download the data
+                    tasks = []
+                    for variable, pressure_level in reformated_variables:
+                        if not self.chunk_exists(
                             variable,
                             current_date.year,
                             current_date.month,
                             hours,
                             pressure_level,
-                        )
-                        tasks.append(task)
-                    else:
-                        print(
-                            f"Chunk for {variable} {pressure_level} {current_date.year}-{current_date.month} already exists. Skipping."
-                        )
+                        ):
+                            task = dask.delayed(self.download_and_upload_chunk)(
+                                variable,
+                                current_date.year,
+                                current_date.month,
+                                hours,
+                                pressure_level,
+                            )
+                            tasks.append(task)
+                        else:
+                            print(
+                                f"Chunk for {variable} {pressure_level} {current_date.year}-{current_date.month} already exists. Skipping."
+                            )
 
-                # Execute the tasks with Dask
-                print(f"Downloading data for {current_date.year}-{current_date.month}")
-                if tasks:
-                    dask.compute(*tasks)
+                    # Execute the tasks with Dask
+                    print(f"Downloading data for {current_date.year}-{current_date.month}")
+                    if tasks:
+                        dask.compute(*tasks)
 
-                # Update the metadata
-                self.save_metadata()
+                    # Update the metadata
+                    self.save_metadata()
+                else:
+                    print(f"Skipping data download for {current_date.year}-{current_date.month}")
 
                 # Update the current date
                 days_in_month = calendar.monthrange(

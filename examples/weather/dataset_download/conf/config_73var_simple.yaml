@@ -1,0 +1,100 @@
+# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+zarr_store_path: "./zarr_data"
+hdf5_store_path: "./hdf5_data"
+dt: 6
+start_train_year: 2015
+end_train_year: 2015
+test_years:
+  - 2016
+out_of_sample_years:
+  - 2017
+months_to_sample:
+  - 1
+compute_mean_std: True
+variables:
+  - "10m_u_component_of_wind"
+  - "10m_v_component_of_wind"
+  - "2m_temperature"
+  - "surface_pressure"
+  - "mean_sea_level_pressure"
+  - "total_column_water_vapour"
+  - "100m_u_component_of_wind"
+  - "100m_v_component_of_wind"
+  - ["z", 50]
+  - ["z", 100]
+  - ["z", 150]
+  - ["z", 200]
+  - ["z", 250]
+  - ["z", 300]
+  - ["z", 400]
+  - ["z", 500]
+  - ["z", 600]
+  - ["z", 700]
+  - ["z", 850]
+  - ["z", 925]
+  - ["z", 1000]
+  - ["t", 50]
+  - ["t", 100]
+  - ["t", 150]
+  - ["t", 200]
+  - ["t", 250]
+  - ["t", 300]
+  - ["t", 400]
+  - ["t", 500]
+  - ["t", 600]
+  - ["t", 700]
+  - ["t", 850]
+  - ["t", 925]
+  - ["t", 1000]
+  - ["u", 50]
+  - ["u", 100]
+  - ["u", 150]
+  - ["u", 200]
+  - ["u", 250]
+  - ["u", 300]
+  - ["u", 400]
+  - ["u", 500]
+  - ["u", 600]
+  - ["u", 700]
+  - ["u", 850]
+  - ["u", 925]
+  - ["u", 1000]
+  - ["v", 50]
+  - ["v", 100]
+  - ["v", 150]
+  - ["v", 200]
+  - ["v", 250]
+  - ["v", 300]
+  - ["v", 400]
+  - ["v", 500]
+  - ["v", 600]
+  - ["v", 700]
+  - ["v", 850]
+  - ["v", 925]
+  - ["v", 1000]
+  - ["r", 50]
+  - ["r", 100]
+  - ["r", 150]
+  - ["r", 200]
+  - ["r", 250]
+  - ["r", 300]
+  - ["r", 400]
+  - ["r", 500]
+  - ["r", 600]
+  - ["r", 700]
+  - ["r", 850]
+  - ["r", 925]
+  - ["r", 1000]

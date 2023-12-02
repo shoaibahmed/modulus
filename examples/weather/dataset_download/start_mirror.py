@@ -26,27 +26,32 @@ import matplotlib.pyplot as plt
 from era5_mirror import ERA5Mirror
 
 
-@hydra.main(version_base="1.2", config_path="conf", config_name="config_tas")
+@hydra.main(version_base="1.2", config_path="conf", config_name="config_73var_simple")
 def main(cfg: DictConfig) -> None:
     # Make mirror data
     logging.getLogger().setLevel(logging.ERROR)  # Suppress logging from cdsapi
     mirror = ERA5Mirror(base_path=cfg.zarr_store_path)
 
-    # split the years into train, validation, and test
+    # Split the years into train, validation, and test
     train_years = list(range(cfg.start_train_year, cfg.end_train_year + 1))
     test_years = cfg.test_years
     out_of_sample_years = cfg.out_of_sample_years
     all_years = train_years + test_years + out_of_sample_years
 
-    # Set the variables to download for 34 var dataset
+    # Set the date range for download
     date_range = (
         datetime.date(min(all_years), 1, 1),
         datetime.date(max(all_years), 12, 31),
     )
     hours = [cfg.dt * i for i in range(0, 24 // cfg.dt)]
 
+    months_to_download = None
+    if "months_to_sample" in cfg:
+        months_to_download = cfg.months_to_sample
+        print("Months to sample arg found in the config:", months_to_download)
+
     # Start the mirror
-    zarr_paths = mirror.download(cfg.variables, date_range, hours)
+    zarr_paths = mirror.download(cfg.variables, date_range, hours, months_to_download)
 
     # Open the zarr files and construct the xarray from them
     zarr_arrays = [xr.open_zarr(path) for path in zarr_paths]
