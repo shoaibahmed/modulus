@@ -324,12 +324,13 @@ class ERA5Mirror:
             zarr_paths.append(zarr_path)
 
         # Check that Zarr arrays have correct dt for time dimension
-        for zarr_path in zarr_paths:
-            ds = xr.open_zarr(zarr_path)
-            time_stamps = ds.time.values
-            dt = time_stamps[1:] - time_stamps[:-1]
-            assert np.all(
-                dt == dt[0]
-            ), f"Zarr array {zarr_path} has incorrect dt for time dimension. An error may have occurred during download. Please delete the Zarr array and try again."
+        if months_to_download is None:  # the test would fail otherwise as there are large gaps in between
+            for zarr_path in zarr_paths:
+                ds = xr.open_zarr(zarr_path)
+                time_stamps = ds.time.values
+                dt = time_stamps[1:] - time_stamps[:-1]
+                assert np.all(
+                    dt == dt[0]
+                ), f"Zarr array {zarr_path} has incorrect dt for time dimension. An error may have occurred during download. Please delete the Zarr array and try again {dt}."
 
         return zarr_paths
