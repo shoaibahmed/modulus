@@ -156,14 +156,30 @@ np_arr = np.array(era5_xarray.values)
 print("Dataset shape:", np_arr.shape)
 assert not np.isnan(np_arr).any()
 
+# Create the HDF5 output directory
+hdf5_output_dir = os.path.join("latest_hdf5")
+if not os.path.isdir(hdf5_output_dir):
+    os.makedirs(hdf5_output_dir)
+
+# Save mean and std
+compute_mean_std = True
+if compute_mean_std:
+    stats_path = os.path.join(hdf5_output_dir, "stats")
+    print(f"Saving global mean and std at {stats_path}")
+    if not os.path.exists(stats_path):
+        os.makedirs(stats_path)
+    era5_mean = np.array(era5_xarray.mean(dim=("time", "latitude", "longitude")).values)
+    np.save(
+        os.path.join(stats_path, "global_means.npy"), era5_mean.reshape(1, -1, 1, 1)
+    )
+    era5_std = np.array(era5_xarray.std(dim=("time", "latitude", "longitude")).values)
+    np.save(os.path.join(stats_path, "global_stds.npy"), era5_std.reshape(1, -1, 1, 1))
+    print(f"Finished saving global mean and std at {stats_path}")
+
 # Move the train and test
 train_years = years[:-1]
 test_years = years[-1:]
 print(f"Train years: {train_years} / Test years: {test_years}")
-
-hdf5_output_dir = os.path.join("latest_hdf5")
-if not os.path.isdir(hdf5_output_dir):
-    os.makedirs(hdf5_output_dir)
 
 # Generate final HDF5 files
 for year in years:
