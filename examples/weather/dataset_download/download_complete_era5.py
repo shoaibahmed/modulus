@@ -111,7 +111,7 @@ for year in years:
                 print(
                     f"Data for {month_str}.{year_str} and pressure level {pl} already exists!"
                 )
-            file_list.append(file_str)
+            file_list.append((file_str, year))
 
         # we have only one pressure level here
         file_str = os.path.join(base_output_dir, f"sfc_{year_str}-{month_str}.nc")
@@ -132,7 +132,7 @@ for year in years:
                 },
                 file_str,
             )
-        file_list.append(file_str)
+        file_list.append((file_str, year))
 
 # Create the ZARR output directory
 zarr_output_dir = os.path.join("73var_zarr_data")
@@ -140,12 +140,16 @@ if not os.path.isdir(zarr_output_dir):
     os.makedirs(zarr_output_dir)
 
 # Convert the dataset into ZARR format
-zarr_output_files = []
-for file in file_list:
+zarr_output_files_dict = {}  # dictionary of years with all channel files in a year
+for file, year in file_list:
     print("!! Loading file:", file)
     zarr_output_file = os.path.split(file.replace(".nc", ".zarr"))[1]
     zarr_output_file = os.path.join(zarr_output_dir, zarr_output_file)
-    zarr_output_files.append(zarr_output_file)
+
+    if year not in zarr_output_files_dict:
+        zarr_output_files_dict[year] = []
+    zarr_output_files_dict[year].append(zarr_output_file)
+
     if os.path.exists(zarr_output_file):
         print("ZARR file already exists:", zarr_output_file)
         continue
@@ -154,7 +158,7 @@ for file in file_list:
     ds = xr.open_dataset(file)
     print(ds)
 
-    validate_nans = True
+    validate_nans = False
     if validate_nans:
         vars_with_nans = []
         for var_name, data_array in ds.data_vars.items():
@@ -177,17 +181,31 @@ for file in file_list:
 
 # Concatenate all the files into a single dataset array
 print("Concatenating ZARR output files...")
-zarr_arrays = [xr.open_zarr(zarr_output_file) for zarr_output_file in zarr_output_files]
-print(zarr_arrays)
+era5_xarray_list = []
+for key in zarr_output_files_dict:
+    print(f"key: {key} / files: {len(zarr_output_files_dict[key])}")
+    zarr_arrays = [xr.open_zarr(zarr_output_file) for zarr_output_file in zarr_output_files_dict[key]]
 
-print("Concatenating the dataset...")
+    # Concatenate all the variables in a file, as well as all the variables in a year
+    # Expected size: (channel, time, lat, long)
+    era5_xarray = xr.concat(
+        [xr.concat([z[x] for x in z.data_vars.keys()], dim="channel") for z in zarr_arrays],
+        dim="channel",
+    )
+    era5_xarray_list.append(era5_xarray)
+    print(f"year: {key} / shape: {era5_xarray.shape}")
+
+# Concatenate the variables for the different years in time dim
+# Expected size: (channel, time * num_years, lat, long)
 era5_xarray = xr.concat(
-    [xr.concat([z[x] for x in z.data_vars.keys()], dim="channel") for z in zarr_arrays],
-    dim="channel",
+    era5_xarray_list,
+    dim="time",
 )
 era5_xarray = era5_xarray.transpose("time", "channel", "latitude", "longitude")
 era5_xarray.name = "fields"
 era5_xarray = era5_xarray.astype("float32")
+del era5_xarray_list
+print("Full data shape:", era5_xarray.shape)
 
 validate_nans = False
 if validate_nans:
