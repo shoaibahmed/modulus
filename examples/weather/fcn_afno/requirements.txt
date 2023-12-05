@@ -1,0 +1,15 @@
+torch
+torchvision
+h5py
+opt_einsum
+tensorly
+tensorly-torch
+wandb
+git+https://github.com/NeuralOperator/neuraloperator
+zarr
+torch_harmonics
+natsort
+hydra-core
+termcolor
+mlflow
+aiobotocore
