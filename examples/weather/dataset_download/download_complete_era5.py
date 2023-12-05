@@ -237,7 +237,7 @@ if compute_mean_std:
         print("Global mean file already exists!")
 
     std_output_file = os.path.join(stats_path, "global_stds.npy")
-    if not os.path.exists(means_output_file):
+    if not os.path.exists(std_output_file):
         print(f"Computing global standard deviation...")
         era5_std = np.array(
             era5_xarray.std(dim=("time", "latitude", "longitude")).values
