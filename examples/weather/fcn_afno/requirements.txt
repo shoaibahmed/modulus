@@ -5,7 +5,7 @@ opt_einsum
 tensorly
 tensorly-torch
 wandb
-git+https://github.com/NeuralOperator/neuraloperator
+git+https://github.com/shoaibahmed/neuraloperator
 zarr
 torch_harmonics
 natsort
