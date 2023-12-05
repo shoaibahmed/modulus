@@ -24,14 +24,10 @@ from dask.diagnostics import ProgressBar
 
 
 dt_hours = 6  # in hours
-min_pressure_level = 50
-max_pressure_level = 1000
-pressure_level_delta = 50
+pressure_levels = [50, 100, 150, 200, 250, 300, 400, 500, 600, 700, 850, 925, 1000]
+pl_vars = ["z", "t", "u", "v", "r"]
+non_pl_vars = ["10u", "10v", "100u", "100v", "2t", "sp", "msl", "tcvw"]
 months = [f"{x+1:02d}" for x in range(0, 1)]
-
-base_output_dir = os.path.join("latest_data")
-if not os.path.isdir(base_output_dir):
-    os.makedirs(base_output_dir)
 
 year_dict = {
     "first": np.arange(1979, 1993),
@@ -40,24 +36,45 @@ year_dict = {
     "all": np.arange(1979, 2021),
     "test": np.arange(2015, 2017),
 }
+
 years = year_dict["test"]
+day_timings = [f"{x:02d}:00" for x in range(0, 24, dt_hours)]
+
 print("Years:", years)
 print("Months:", months)
-
-day_timings = [f"{x:02d}:00" for x in range(0, 24, dt_hours)]
 print("Day timings:", day_timings)
-
-pressure_levels = list(
-    range(
-        min_pressure_level,
-        max_pressure_level + pressure_level_delta,
-        pressure_level_delta,
-    )
-)
 print("Pressure levels:", pressure_levels)
+
+# u, v, w, z, t, q
+# 131/132/135.128/129.128/130.128/133.128
+# 10u, 10v, 100u, 100v, 2t, sp, msl, tcvw
+# 165.128/166.128/246.228/247.228/167.128/134.128/151.128/137.128
+# full list: https://github.com/coecms/era5/blob/master/era5/data/era5_vars.json
+variable_to_code_dict = {
+    "u": "131.128",
+    "v": "132.128",
+    "w": "135.128",
+    "z": "129.128",
+    "t": "130.128",
+    "q": "133.128",
+    "r": "157.128",
+    "10u": "165.128",
+    "10v": "166.128",
+    "100u": "246.228",
+    "100v": "247.228",
+    "2t": "167.128",
+    "sp": "134.128",
+    "msl": "151.128",
+    "tcvw": "137.128",
+}
 
 # Initialize the API
 c = cdsapi.Client()
+
+# Create the base directory
+base_output_dir = os.path.join("73var_netcdf_data")
+if not os.path.isdir(base_output_dir):
+    os.makedirs(base_output_dir)
 
 # Download the NetCDF files
 file_list = []
@@ -84,8 +101,7 @@ for year in years:
                         "grid": [0.25, 0.25],
                         "format": "netcdf",
                         "levelist": f"{pl}",
-                        # u, v, w, z, t, q
-                        "param": "131/132/135.128/129.128/130.128/133.128",
+                        "param": "/".join([variable_to_code_dict[x] for x in pl_vars]),
                         "date": f"{year_str}-{month_str}-01/to/{year_str}-{month_str}-31",
                         "time": day_timings,
                     },
@@ -112,18 +128,18 @@ for year in years:
                     "format": "netcdf",
                     "date": f"{year_str}-{month_str}-01/to/{year_str}-{month_str}-31",
                     "time": day_timings,
-                    # 10u, 10v, 100u, 100v, 2t, sp, msl, tcvw
-                    "param": "165.128/166.128/246.228/247.228/167.128/134.128/151.128/137.128",
+                    "param": "/".join([variable_to_code_dict[x] for x in non_pl_vars])
                 },
                 file_str,
             )
         file_list.append(file_str)
 
-# Convert the dataset into ZARR format
-zarr_output_dir = os.path.join("latest_zarr")
+# Create the ZARR output directory
+zarr_output_dir = os.path.join("73var_zarr_data")
 if not os.path.isdir(zarr_output_dir):
     os.makedirs(zarr_output_dir)
 
+# Convert the dataset into ZARR format
 zarr_output_files = []
 for file in file_list:
     print("!! Loading file:", file)
@@ -137,6 +153,15 @@ for file in file_list:
     print("Creating ZARR output file from:", zarr_output_file)
     ds = xr.open_dataset(file)
     print(ds)
+
+    # Specify the chunking options
+    chunking = {"time": 1, "latitude": 721, "longitude": 1440}
+    if "level" in ds.dims:
+        chunking["level"] = 1
+
+    # Re-chunk the dataset
+    ds = ds.chunk(chunking)
+
     ds.to_zarr(zarr_output_file, mode="w", consolidated=True, append_dim=None)
     del ds
 
@@ -145,6 +170,7 @@ print("Concatenating ZARR output files...")
 zarr_arrays = [xr.open_zarr(zarr_output_file) for zarr_output_file in zarr_output_files]
 print(zarr_arrays)
 
+print("Concatenating the dataset...")
 era5_xarray = xr.concat(
     [xr.concat([z[x] for x in z.data_vars.keys()], dim="channel") for z in zarr_arrays],
     dim="channel",
@@ -152,12 +178,16 @@ era5_xarray = xr.concat(
 era5_xarray = era5_xarray.transpose("time", "channel", "latitude", "longitude")
 era5_xarray.name = "fields"
 era5_xarray = era5_xarray.astype("float32")
-np_arr = np.array(era5_xarray.values)
-print("Dataset shape:", np_arr.shape)
-assert not np.isnan(np_arr).any()
+
+validate_nans = False
+if validate_nans:
+    print("Validating NaN error using conversion to numpy array!")
+    np_arr = np.array(era5_xarray.values)
+    print("Dataset shape:", np_arr.shape)
+    assert not np.isnan(np_arr).any()
 
 # Create the HDF5 output directory
-hdf5_output_dir = os.path.join("latest_hdf5")
+hdf5_output_dir = os.path.join("73var_hdf5_data")
 if not os.path.isdir(hdf5_output_dir):
     os.makedirs(hdf5_output_dir)
 
