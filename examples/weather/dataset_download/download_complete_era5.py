@@ -128,7 +128,7 @@ for year in years:
                     "format": "netcdf",
                     "date": f"{year_str}-{month_str}-01/to/{year_str}-{month_str}-31",
                     "time": day_timings,
-                    "param": "/".join([variable_to_code_dict[x] for x in non_pl_vars])
+                    "param": "/".join([variable_to_code_dict[x] for x in non_pl_vars]),
                 },
                 file_str,
             )
@@ -153,6 +153,16 @@ for file in file_list:
     print("Creating ZARR output file from:", zarr_output_file)
     ds = xr.open_dataset(file)
     print(ds)
+
+    validate_nans = True
+    if validate_nans:
+        vars_with_nans = []
+        for var_name, data_array in ds.data_vars.items():
+            if data_array.isnull().any():
+                vars_with_nans.append(var_name)
+        if len(vars_with_nans) > 0:
+            print(f'Variables containing NaN values: {vars_with_nans}')
+            exit()
 
     # Specify the chunking options
     chunking = {"time": 1, "latitude": 721, "longitude": 1440}
@@ -195,15 +205,29 @@ if not os.path.isdir(hdf5_output_dir):
 compute_mean_std = True
 if compute_mean_std:
     stats_path = os.path.join(hdf5_output_dir, "stats")
-    print(f"Saving global mean and std at {stats_path}")
     if not os.path.exists(stats_path):
         os.makedirs(stats_path)
-    era5_mean = np.array(era5_xarray.mean(dim=("time", "latitude", "longitude")).values)
-    np.save(
-        os.path.join(stats_path, "global_means.npy"), era5_mean.reshape(1, -1, 1, 1)
-    )
-    era5_std = np.array(era5_xarray.std(dim=("time", "latitude", "longitude")).values)
-    np.save(os.path.join(stats_path, "global_stds.npy"), era5_std.reshape(1, -1, 1, 1))
+
+    means_output_file = os.path.join(stats_path, "global_means.npy")
+    if not os.path.exists(means_output_file):
+        print(f"Computing global mean...")
+        era5_mean = np.array(
+            era5_xarray.mean(dim=("time", "latitude", "longitude")).values
+        )
+        np.save(means_output_file, era5_mean.reshape(1, -1, 1, 1))
+    else:
+        print("Global mean file already exists!")
+
+    std_output_file = os.path.join(stats_path, "global_stds.npy")
+    if not os.path.exists(means_output_file):
+        print(f"Computing global standard deviation...")
+        era5_std = np.array(
+            era5_xarray.std(dim=("time", "latitude", "longitude")).values
+        )
+        np.save(std_output_file, era5_std.reshape(1, -1, 1, 1))
+    else:
+        print("Global standard devaition file already exists!")
+
     print(f"Finished saving global mean and std at {stats_path}")
 
 # Move the train and test
@@ -224,6 +248,9 @@ for year in years:
     hdf5_path = os.path.join(hdf5_output_dir, split)
     os.makedirs(hdf5_path, exist_ok=True)
     hdf5_path = os.path.join(hdf5_path, f"{year}.h5")
+    if os.path.exists(hdf5_path):
+        print(f"{hdf5_path} already exists. Skipping file.")
+        continue
 
     # Save year using dask
     print(f"Saving {year} at {hdf5_path}")
@@ -236,6 +263,7 @@ for year in years:
         with ProgressBar():
             # Get data for the current year
             year_data = era5_xarray.sel(time=era5_xarray.time.dt.year == year)
+            assert not year_data.isnull().any()
 
             # Save data to a temporary local file
             year_data.to_netcdf(hdf5_path, engine="h5netcdf", compute=True)
