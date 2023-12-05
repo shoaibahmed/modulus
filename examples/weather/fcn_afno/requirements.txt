@@ -13,3 +13,4 @@ hydra-core
 termcolor
 mlflow
 aiobotocore
+git+https://github.com/shoaibahmed/modulus
