@@ -356,11 +356,13 @@ class ERA5DaliExternalSource:
 
         self.indices = np.arange(num_samples)
         # Shard from indices if running in parallel
-        self.indices = np.array_split(self.indices, world_size)[process_rank]
+        all_indices = np.array_split(self.indices, world_size)
+        self.indices = all_indices[process_rank]
 
         # Get number of full batches, ignore possible last incomplete batch for now.
         # Also, DALI external source does not support incomplete batches in parallel mode.
-        self.num_batches = len(self.indices) // self.batch_size
+        # Pick the smallest list size to ensure that all batches terminate at the same time
+        self.num_batches = min([len(x) for x in all_indices]) // self.batch_size
 
     def __call__(self, sample_info: dali.types.SampleInfo) -> Tuple[Tensor, Tensor]:
         if sample_info.iteration >= self.num_batches:
