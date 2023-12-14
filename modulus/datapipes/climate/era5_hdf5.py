@@ -75,6 +75,10 @@ class ERA5HDF5Datapipe(Datapipe):
         Shuffle dataset, by default True
     num_workers : int, optional
         Number of workers, by default 1
+    num_threads : int, optional
+        Number of DALI threads, by default 2
+    prefetch_queue_depth: int, optional
+        DALI prefetch queue depth, by default 2
     device: Union[str, torch.device], optional
         Device for DALI pipeline to run on, by default cuda
     process_rank : int, optional
@@ -95,6 +99,8 @@ class ERA5HDF5Datapipe(Datapipe):
         num_samples_per_year: Union[int, None] = None,
         shuffle: bool = True,
         num_workers: int = 1,
+        num_threads: int = 2,
+        prefetch_queue_depth: int = 2,
         device: Union[str, torch.device] = "cuda",
         process_rank: int = 0,
         world_size: int = 1,
@@ -102,6 +108,8 @@ class ERA5HDF5Datapipe(Datapipe):
         super().__init__(meta=MetaData())
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.num_threads = num_threads
+        self.prefetch_queue_depth = prefetch_queue_depth
         self.shuffle = shuffle
         self.data_dir = Path(data_dir)
         self.stats_dir = Path(stats_dir) if stats_dir is not None else None
@@ -238,8 +246,8 @@ class ERA5HDF5Datapipe(Datapipe):
         """
         pipe = dali.Pipeline(
             batch_size=self.batch_size,
-            num_threads=2,
-            prefetch_queue_depth=2,
+            num_threads=self.num_threads,
+            prefetch_queue_depth=self.prefetch_queue_depth,
             py_num_workers=self.num_workers,
             device_id=self.device.index,
             py_start_method="spawn",
