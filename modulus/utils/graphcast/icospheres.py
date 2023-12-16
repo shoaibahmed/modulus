@@ -16,10 +16,7 @@ import json
 
 import numpy as np
 
-try:
-    import pymesh
-except ImportError:
-    Warning("pymesh is not installed. Please install it to use icosphere.")
+import trimesh
 
 # TODO apply a transformation to make faces parallel to ploes
 
@@ -27,7 +24,7 @@ except ImportError:
 def generate_and_save_icospheres(
     save_path: str = "icospheres.json", level: int = 6
 ) -> None:  # pragma: no cover
-    """enerate icospheres from level 0 to 6 (inclusive) and save them to a json file.
+    """Generate icospheres from level 0 to 6 (inclusive) and save them to a json file.
 
     Parameters
     ----------
@@ -35,18 +32,17 @@ def generate_and_save_icospheres(
         Path to save the json file.
     """
     radius = 1
-    center = np.array((0, 0, 0))
     icospheres = {"vertices": [], "faces": []}
 
     # Generate icospheres from level 0 to 6 (inclusive)
     for order in range(level + 1):
-        icosphere = pymesh.generate_icosphere(radius, center, refinement_order=order)
-        icospheres["order_" + str(order) + "_vertices"] = icosphere.vertices
-        icospheres["order_" + str(order) + "_faces"] = icosphere.faces
-        icosphere.add_attribute("face_centroid")
-        icospheres[
-            "order_" + str(order) + "_face_centroid"
-        ] = icosphere.get_face_attribute("face_centroid")
+        sphere = trimesh.creation.icosphere(subdivisions=order, radius=radius)
+        icospheres["order_" + str(order) + "_vertices"] = sphere.vertices
+        icospheres["order_" + str(order) + "_faces"] = sphere.faces
+
+        # Computing face centroids
+        centroids = np.mean(sphere.triangles, axis=1)
+        icospheres["order_" + str(order) + "_face_centroid"] = centroids
 
     # save icosphere vertices and faces to a json file
     icospheres_dict = {
