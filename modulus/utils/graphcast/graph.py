@@ -52,16 +52,14 @@ class Graph:
         self, icospheres_path: str, lat_lon_grid: Tensor, dtype=torch.float
     ) -> None:
         self.dtype = dtype
+        if not icospheres_path.endswith(".json"):
+            logger.info(
+                f"{icospheres_path} is not a json file. Replacing name."
+            )
+            icospheres_path = "icospheres.json"
+
         # Get or generate the icospheres
-        try:
-            with open(icospheres_path, "r") as f:
-                loaded_dict = json.load(f)
-                icospheres = {
-                    key: (np.array(value) if isinstance(value, list) else value)
-                    for key, value in loaded_dict.items()
-                }
-                logger.info(f"Opened pre-computed graph at {icospheres_path}.")
-        except FileNotFoundError:
+        if not os.path.exists(icospheres_path):
             from modulus.utils.graphcast.icospheres import (
                 generate_and_save_icospheres,
             )
@@ -69,7 +67,15 @@ class Graph:
             logger.info(
                 f"Could not open {icospheres_path}...generating mesh from scratch."
             )
-            generate_and_save_icospheres()
+            generate_and_save_icospheres(icospheres_path)
+
+        with open(icospheres_path, "r") as f:
+            loaded_dict = json.load(f)
+            icospheres = {
+                key: (np.array(value) if isinstance(value, list) else value)
+                for key, value in loaded_dict.items()
+            }
+            logger.info(f"Opened pre-computed graph at {icospheres_path}.")
 
         self.icospheres = icospheres
         self.max_order = (
