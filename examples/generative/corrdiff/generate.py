@@ -38,8 +38,8 @@ from modulus.utils.generative import (
     ablation_sampler,
     parse_int_list,
     StackedRandomGenerator,
-    construct_class_by_name,
 )
+from module import Module  # TODO import from Core once the kwargs issue is fixed
 
 
 @hydra.main(version_base="1.2", config_path="conf", config_name="config_generate")
@@ -59,6 +59,7 @@ def main(cfg: DictConfig) -> None:
     res_edm = getattr(cfg, "res_edm", True)
     sampling_method = getattr(cfg, "sampling_method", "stochastic")
     seed_batch_size = getattr(cfg, "seed_batch_size", 1)
+    force_fp16 = getattr(cfg, "force_fp16", False)
 
     # Parse deterministic sampler options
     sigma_min = getattr(cfg, "sigma_min", None)
@@ -155,20 +156,12 @@ def main(cfg: DictConfig) -> None:
 
     # Load diffusion network
     logger0.info(f'Loading residual network from "{res_ckpt_filename}"...')
-    net_res_state_dict = torch.load(res_ckpt_filename)
-    with open("checkpoints/args_diffusion.json", "r") as json_file:
-        args_diffusion = json.load(json_file)
-    net_res = construct_class_by_name(**args_diffusion)
-    net_res.load_state_dict(net_res_state_dict, strict=False)
+    net_res = Module.from_checkpoint(res_ckpt_filename)
 
     # load regression network
-    logger0.info(f'Loading network from "{reg_ckpt_filename}"...')
-    net_reg_state_dict = torch.load(reg_ckpt_filename) if res_edm else None
     if res_edm:
-        with open("checkpoints/args_regression.json", "r") as json_file:
-            args_regression = json.load(json_file)
-        net_reg = construct_class_by_name(**args_regression)
-        net_reg.load_state_dict(net_reg_state_dict, strict=False)
+        logger0.info(f'Loading network from "{reg_ckpt_filename}"...')
+        net_reg = Module.from_checkpoint(reg_ckpt_filename)
     else:
         net_reg = None
 
@@ -177,6 +170,11 @@ def main(cfg: DictConfig) -> None:
     device = dist.device
     net_res = net_res.eval()
     net_reg = net_reg.eval() if net_reg else None
+
+    # change precision if needed
+    if force_fp16:
+        net_reg.use_fp16 = True
+        net_res.use_fp16 = True
 
     def generate_fn(image_lr):
         """Function to generate an image

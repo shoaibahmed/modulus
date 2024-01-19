@@ -20,12 +20,12 @@ hydra:
 ## Main options
 outdir: "./output"   
   # Where to save the results
-data: "./data"
+data: 2023-01-24-cwb-4years.zarr
   # Path to the dataset
-arch: 'ddpmpp-cwb-v0-regression'
-  # Network architecture
+arch: ddpmpp-cwb-v0-regression
+  # Network architecture [ddpmpp, ddpmpp-cwb-v2, ncsnpp, adm, ddpmpp-cwb-v0-regression]
 precond: unetregression
-  # Preconditioning & loss function
+  # Preconditioning & loss function [vp, ve, edm, unetregression, resloss]
 
 ## Hyperparameters
 duration: 200
@@ -52,7 +52,7 @@ fp16: false
   # Enable mixed-precision training
 ls: 1
   # Loss scaling
-bench: true  # TODO should default to false
+bench: false
   # Enable cuDNN benchmarking
 workers: 4
   # DataLoader worker processes
@@ -71,13 +71,11 @@ seed: null  # TODO check
   # Random seed
 transfer: null  # TODO check
   # Transfer learning from network pickle
-resume: null  # TODO check
-  # Resume from previous training state
 dry-run: false
   # Print training options and exit
 
 ## Weather data options
-train_data_path: "./train_data"
+train_data_path: /data/data2/2023-01-24-cwb-4years.zarr
 crop_size_x: 448
 crop_size_y: 448
 n_history: 0

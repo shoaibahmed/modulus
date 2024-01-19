@@ -11,13 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Distributed process group configuration mechanism.
-- DistributedManager utility to instantiate process groups based on they
-process group config.
+- DistributedManager utility to instantiate process groups based on a process group config.
+- Helper functions to faciliate distributed training with shared parameters.
 - Brain anomaly detection example.
-- Updated Frechet Inception Distance to use Wasserstein 2-norm with improved
-stability.
+- Updated Frechet Inception Distance to use Wasserstein 2-norm with improved stability.
 - Molecular Dynamics example.
 - Improved usage of GraphPartition, added more flexible ways of defining a partitioned graph.
+- Physics-Informed Stokes Flow example.
 
 ### Changed
 
@@ -38,6 +38,7 @@ stability.
 
 - Removed experimental SFNO dependencies
 - Added CorrDiff dependencies (cftime, einops, pyspng)
+- Made tqdm a required dependency
 
 ## [0.4.0] - 2023-11-20
 
