@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from importlib.metadata import EntryPoint, entry_points
+from importlib_metadata import EntryPoint, entry_points
 from typing import List, Union
 
 # This import is required for compatibility with doctests.
